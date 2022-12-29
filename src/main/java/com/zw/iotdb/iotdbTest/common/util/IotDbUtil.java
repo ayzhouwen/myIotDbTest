@@ -48,6 +48,12 @@ public class IotDbUtil {
             return false;
         }
     }
+
+    /**
+     * 执行sql查询
+     * @param sql
+     * @return
+     */
     public  List<Map<String,String>> querySql(String sql) {
         List<Map<String,String>> rowList=new ArrayList<>();
         SessionDataSetWrapper wrapper = null;
@@ -69,6 +75,18 @@ public class IotDbUtil {
             pool.closeResultSet(wrapper);
         }
         return rowList;
+    }
+
+    /**
+     * 执行非查询sql
+     * @param sql
+     */
+    public  void execSql(String sql){
+        try {
+            pool.executeNonQueryStatement(sql);
+        } catch (Exception e) {
+            log.error("执行非查询sql:{}异常:",sql,e);
+        }
     }
 
 }

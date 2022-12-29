@@ -32,4 +32,16 @@ class IotdbTest {
 			throw new RuntimeException(e);
 		}
 	}
+
+	@Test
+	void noQuerySQL(){
+		iotDbUtil.execSql("CREATE DATABASE root.zw2");
+		iotDbUtil.execSql("CREATE DATABASE root.zw3");
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 }
