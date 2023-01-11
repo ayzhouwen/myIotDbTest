@@ -3,8 +3,6 @@ package com.zw.iotdb.iotdbTest.common.util;
 import cn.hutool.core.convert.Convert;
 import com.zw.iotdb.iotdbTest.common.config.AppConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.iotdb.rpc.IoTDBConnectionException;
-import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.iotdb.session.SessionDataSet;
 import org.apache.iotdb.session.pool.SessionDataSetWrapper;
 import org.apache.iotdb.session.pool.SessionPool;
@@ -24,14 +22,14 @@ import java.util.Map;
 @Component
 @Slf4j
 public class IotDbUtil {
-    private  SessionPool pool;
+    public  SessionPool pool;
     @Resource
     private AppConfig appConfig;
     @PostConstruct
     void  init(){
         pool  =new SessionPool.Builder().host(appConfig.getIotdbHost())
                 .port(Convert.toInt(appConfig.getIotdbPort())).user(appConfig.getIotdbUser())
-                .password(appConfig.getIotdbPassword()).maxSize(12).build();
+                .password(appConfig.getIotdbPassword()).maxSize(1024).build();
     }
 
     /**
@@ -87,6 +85,11 @@ public class IotDbUtil {
         } catch (Exception e) {
             log.error("执行非查询sql:{}异常:",sql,e);
         }
+    }
+
+
+    public void insertRecord(){
+
     }
 
 }
