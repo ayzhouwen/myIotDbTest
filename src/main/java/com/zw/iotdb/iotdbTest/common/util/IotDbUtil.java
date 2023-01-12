@@ -88,8 +88,4 @@ public class IotDbUtil {
     }
 
 
-    public void insertRecord(){
-
-    }
-
 }

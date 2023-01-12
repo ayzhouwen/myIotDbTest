@@ -100,9 +100,9 @@ class IotdbTest {
 	void multiThreadWriteTest() throws InterruptedException {
 		//删除数据库
 		List<String>measurements= new ArrayList<>(Arrays.asList("pointVaule","pointState"));
-        int threadNum=Runtime.getRuntime().availableProcessors()*2;
+        int threadNum=16;
 		ThreadPoolExecutor poolExecutor= (ThreadPoolExecutor) Executors.newFixedThreadPool(threadNum);
-		int rowSize=100000;
+		int rowSize=10000000;
 		CountDownLatch countDownLatch=new CountDownLatch(rowSize);
 		long stime=System.currentTimeMillis();
 		//数据写入
@@ -129,5 +129,7 @@ class IotdbTest {
 		log.info(MyDateUtil.execTime("iotdb多线程个数:"+threadNum+",写入条数:"+rowSize+":",stime));
 
 	}
+
+
 
 }
