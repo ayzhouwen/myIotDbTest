@@ -113,7 +113,7 @@ public class PerformanceTestService {
                   poolExecutor.execute(()->{
                       try {
                           Tablet tablet = new Tablet(deviceCode, schemaList, batchWriteRowNum);
-                          long timestamp = System.currentTimeMillis();
+                          long timestamp = System.currentTimeMillis()*1000000L;
                           for (long row = 0; row < finalGenerateNum; row++) {
                               int rowIndex = tablet.rowSize++;
                               tablet.addTimestamp(rowIndex, timestamp);
@@ -123,7 +123,7 @@ public class PerformanceTestService {
                                   iotDbUtil.pool.insertTablet(tablet, true);
                                   tablet.reset();
                               }
-                              timestamp++;
+                              timestamp=timestamp+(finalI*batchWriteRowNum+row%1000000L);
                           }
 
                           if (tablet.rowSize != 0) {
