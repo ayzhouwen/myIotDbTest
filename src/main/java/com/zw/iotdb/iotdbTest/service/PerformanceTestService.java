@@ -69,7 +69,7 @@ public class PerformanceTestService {
                   poolExecutor.execute(()->{
                       try {
                           iotDbUtil.pool.insertRecord(deviceCode,
-                                  System.nanoTime(),measurements,Arrays.asList(finalI +"", Convert.toStr(finalI %4)));
+                                  System.currentTimeMillis(),measurements,Arrays.asList(finalI +"", Convert.toStr(finalI %4)));
 //                          log.info("成功写入第{}条数据:",finalI);
                       } catch (Exception e) {
                           log.error("写入数据异常,当前写入条数:{}", finalI,e);
@@ -113,7 +113,7 @@ public class PerformanceTestService {
                   poolExecutor.execute(()->{
                       try {
                           Tablet tablet = new Tablet(deviceCode, schemaList, batchWriteRowNum);
-                          long timestamp = System.nanoTime();
+                          long timestamp = System.currentTimeMillis();
                           for (long row = 0; row < finalGenerateNum; row++) {
                               int rowIndex = tablet.rowSize++;
                               tablet.addTimestamp(rowIndex, timestamp);
