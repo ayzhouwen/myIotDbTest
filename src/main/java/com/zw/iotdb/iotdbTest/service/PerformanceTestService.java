@@ -3,10 +3,14 @@ package com.zw.iotdb.iotdbTest.service;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.PageUtil;
 import com.zw.iotdb.iotdbTest.common.config.AppConfig;
 import com.zw.iotdb.iotdbTest.common.util.IotDbUtil;
 import com.zw.iotdb.iotdbTest.common.util.MyDateUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.write.record.Tablet;
+import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -29,10 +33,10 @@ public class PerformanceTestService {
     private AppConfig appConfig;
 
     //多线程写入测试
-  public   void multiThreadWriteTest(){
-        //删除数据库
+  public   void multiThreadWriteTest()  {
+        //
         List<String> measurements= new ArrayList<>(Arrays.asList("pointVaule","pointState"));
-        int threadNum=Runtime.getRuntime().availableProcessors()*2;
+        int threadNum=Convert.toInt(appConfig.getWriteThreadNum());
         ThreadPoolExecutor poolExecutor= (ThreadPoolExecutor) Executors.newFixedThreadPool(threadNum);
         int openBatchWrite=Convert.toInt(appConfig.getOpenBatchWrite());
         int allWriteRowNum=Convert.toInt(appConfig.getAllWriteRowNum());
@@ -50,6 +54,7 @@ public class PerformanceTestService {
         }
 
         //每秒平均写入
+      String deviceCode="root.jmdb.s1.d"+appConfig.getDeviceCodeSuffix();
       for (int j = 0; j < writeWheel; j++) {
           double averageWrite=0;
           long stime=System.currentTimeMillis();
@@ -59,15 +64,13 @@ public class PerformanceTestService {
               //数据写入
               for (int i = 0; i <allWriteRowNum ; i++) {
                   //监控主机号
-                  int suCodeSuffix=1;
-                  int deviceCodeSuffix=i%20;
                   int finalI = i;
                   CountDownLatch finalCountDownLatch = countDownLatch;
                   poolExecutor.execute(()->{
                       try {
-                          iotDbUtil.pool.insertRecord("root.jmdb.D010200100000E"+suCodeSuffix+"."+"M11010700500000001030300000E"+deviceCodeSuffix,
-                                  System.currentTimeMillis(),measurements,Arrays.asList(finalI +"", Convert.toStr(finalI %10)));
-                          log.debug("成功写入第{}条数据:",finalI);
+                          iotDbUtil.pool.insertRecord(deviceCode,
+                                  System.nanoTime(),measurements,Arrays.asList(finalI +"", Convert.toStr(finalI %4)));
+//                          log.info("成功写入第{}条数据:",finalI);
                       } catch (Exception e) {
                           log.error("写入数据异常,当前写入条数:{}", finalI,e);
                           log.info(MyDateUtil.execTime("iotdb写入测试",stime));
@@ -88,7 +91,69 @@ public class PerformanceTestService {
               averageWrite=allWriteRowNum/etime*1000;
               log.info("第{}轮平均每秒写入数据量:{}",j+1,NumberUtil.decimalFormat("#",averageWrite));
           }else if (openBatchWrite==1){
-              int average=1;
+              int totalPage=PageUtil.totalPage(allWriteRowNum,batchWriteRowNum);
+              countDownLatch=new CountDownLatch(totalPage);
+              List<MeasurementSchema> schemaList = new ArrayList<>();
+              schemaList.add(new MeasurementSchema("pointVaule", TSDataType.TEXT));
+              schemaList.add(new MeasurementSchema("pointState", TSDataType.INT32));
+
+              //数据写入
+              for (int i = 0; i <totalPage ; i++) {
+                  int finalI = i;
+                  CountDownLatch finalCountDownLatch = countDownLatch;
+                  //本页生成数据数量计算
+                  long generateNum=batchWriteRowNum;
+                  if ((i+1)==totalPage){
+                       int n=(i+1)*batchWriteRowNum-allWriteRowNum;
+                        if (n>0){
+                            generateNum=batchWriteRowNum-n;
+                        }
+                  }
+                  long finalGenerateNum = generateNum;
+                  poolExecutor.execute(()->{
+                      try {
+                          Tablet tablet = new Tablet(deviceCode, schemaList, batchWriteRowNum);
+                          long timestamp = System.nanoTime();
+                          for (long row = 0; row < finalGenerateNum; row++) {
+                              int rowIndex = tablet.rowSize++;
+                              tablet.addTimestamp(rowIndex, timestamp);
+                              tablet.addValue(schemaList.get(0).getMeasurementId(), rowIndex, finalI*batchWriteRowNum+row+"");
+                              tablet.addValue(schemaList.get(1).getMeasurementId(), rowIndex, Convert.toInt(row%4));
+                              if (tablet.rowSize == tablet.getMaxRowNumber()) {
+                                  iotDbUtil.pool.insertTablet(tablet, true);
+                                  tablet.reset();
+                              }
+                              timestamp++;
+                          }
+
+                          if (tablet.rowSize != 0) {
+                              iotDbUtil.pool.insertTablet(tablet);
+                              tablet.reset();
+                          }
+                      } catch (Exception e) {
+                          log.error("写入数据异常,当前写入页:{}", finalI,e);
+                          log.info(MyDateUtil.execTime("iotdb写入测试",stime));
+                      }finally {
+                          finalCountDownLatch.countDown();
+                      }
+                  });
+                  try {
+                      Thread.sleep(0);
+                  } catch (InterruptedException e) {
+                      throw new RuntimeException(e);
+                  }
+
+              }
+              try {
+                  countDownLatch.await();
+              } catch (Exception e) {
+                  log.error("等待写入测试异常");
+              }
+              Double etime= Convert.toDouble(DateUtil.spendMs(stime));
+
+              log.info(MyDateUtil.execTime("iotdb多线程个数:"+threadNum+",写入条数"+allWriteRowNum,stime));
+              averageWrite=allWriteRowNum/etime*1000;
+              log.info("第{}轮平均每秒写入数据量:{}",j+1,NumberUtil.decimalFormat("#",averageWrite));
 
           }else{
               log.error("是否开启批量写入测试错误");

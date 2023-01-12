@@ -16,9 +16,10 @@ public class AppConfig {
     private String iotdbUser;
     @Value("${iotdb.password}")
     private String iotdbPassword;
-
     //iot性能测试配置
-
+    //写入设备编号后缀,不同压力机需要设置不同,否则影响测试统计
+    @Value("${iotdbTest.deviceCodeSuffix}")
+    private String deviceCodeSuffix;
     //测试写入多少轮
     @Value("${iotdbTest.writeWheel}")
     private String writeWheel;
@@ -31,4 +32,7 @@ public class AppConfig {
     //一个批写入多少条数据 默认1000
     @Value("${iotdbTest.batchWriteRowNum}")
     private String batchWriteRowNum;
+    @Value("${iotdbTest.writeThreadNum}")
+    //并发写入线程数
+    private String writeThreadNum;
 }
