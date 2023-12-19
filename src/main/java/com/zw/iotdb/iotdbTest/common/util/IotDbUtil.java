@@ -3,8 +3,8 @@ package com.zw.iotdb.iotdbTest.common.util;
 import cn.hutool.core.convert.Convert;
 import com.zw.iotdb.iotdbTest.common.config.AppConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.iotdb.session.SessionDataSet;
-import org.apache.iotdb.session.pool.SessionDataSetWrapper;
+import org.apache.iotdb.isession.SessionDataSet;
+import org.apache.iotdb.isession.pool.SessionDataSetWrapper;
 import org.apache.iotdb.session.pool.SessionPool;
 import org.springframework.stereotype.Component;
 
@@ -52,7 +52,7 @@ public class IotDbUtil {
      * @param sql
      * @return
      */
-    public  List<Map<String,String>> querySql(String sql) {
+    public List<Map<String,String>> querySql(String sql) {
         List<Map<String,String>> rowList=new ArrayList<>();
         SessionDataSetWrapper wrapper = null;
         try {

@@ -1,21 +1,13 @@
 package com.zw.iotdb.iotdbTest;
 
-import cn.hutool.core.convert.Convert;
 import cn.hutool.json.JSONUtil;
 import com.zw.iotdb.iotdbTest.common.util.IotDbUtil;
-import com.zw.iotdb.iotdbTest.common.util.MyDateUtil;
 import com.zw.iotdb.iotdbTest.service.PerformanceTestService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 @SpringBootTest(classes= IotdbTestApplication.class,webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Slf4j
@@ -65,7 +57,7 @@ class IotdbTest {
 
 	@Test
 	void multiThreadWriteTest() throws InterruptedException {
-		performanceTestService.multiThreadWriteTest();
+		performanceTestService.insertMTabletTest();
 	}
 
 
