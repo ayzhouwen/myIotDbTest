@@ -24,7 +24,8 @@ import java.util.concurrent.ThreadPoolExecutor;
  * 1.由于顺序写，一般批量写 非纳秒写入，机械能接近固态的速度（大概 机械25多万，固态33万）
  * 2.多线程提升性能不是很明显
  * 3.如果设置纳秒测试，固态能达到每秒百万（也许还能提升），垃圾机械20万，但是固态下会造成时间戳格式化展示失效
- * 4.生产环境insertMTabletTest是符合实际数据
+ * 4.生产环境insertMTabletTest是符合实际数据的（每秒8万左右，因为数据上报是一个时间的所有测试，不是一个时间段的所有数据），
+ * 5.iotdb的性能跟服务器硬件，和上报数据格式，和监测点数量和批量写入数量都有关系，得实际压测，没有一个标准答案
  *
  *
  */
@@ -192,7 +193,8 @@ public class PerformanceTestService {
         int allWriteRowNum = Convert.toInt(appConfig.getAllWriteRowNum());
         int batchWriteRowNum = Convert.toInt(appConfig.getBatchWriteRowNum());
         int writeWheel = Convert.toInt(appConfig.getWriteWheel());
-        String deviceCodePrefix = "root.jmdb.s1.d_" + appConfig.getDeviceCodeSuffix()+"_";;
+        String deviceCodePrefix = "root.jmdb.s1.d_" + appConfig.getDeviceCodeSuffix()+"_"
+                +"110116000000_0204_000088_00040002_0001_";
         if (writeWheel < 1) {
             log.error("写入总轮数至少为1");
             return;
@@ -233,12 +235,12 @@ public class PerformanceTestService {
                         generateNum = batchWriteRowNum - n;
                     }
                 }
-                long finalGenerateNum = generateNum;
+
                 try {
                     Tablet tablet = new Tablet(deviceCodePrefix+i, schemaList, batchWriteRowNum);
                     //毫秒偏移量
                     long timestamp = System.currentTimeMillis() ;
-                    for (long row = 0; row < finalGenerateNum; row++) {
+                    for (long row = 0; row < generateNum; row++) {
                         int rowIndex = tablet.rowSize++;
                         long offset = timestamp+row;
                         tablet.addTimestamp(rowIndex, offset);
@@ -277,8 +279,7 @@ public class PerformanceTestService {
 
     /**
      * 单线程多设备insertTablets写入，IOTDB timestamp_precision=ms即可，目前只支持批量写入
-     * 固态每秒不到37万
-     * 垃圾机械每秒不到27~30万
+     * 固态每秒8万左右（注意模拟的真实生产环境数据，table的列表长度其实是1个元素，接近真实数据，真实数据不可能给你批量报上来，都是一个时间点的数据）
      */
     public void insertMTabletTest() {
         int threadNum = Convert.toInt(appConfig.getWriteThreadNum());
@@ -286,7 +287,8 @@ public class PerformanceTestService {
         int allWriteRowNum = Convert.toInt(appConfig.getAllWriteRowNum());
         int batchWriteRowNum = Convert.toInt(appConfig.getBatchWriteRowNum());
         int writeWheel = Convert.toInt(appConfig.getWriteWheel());
-        String deviceCodePrefix = "root.jmdb.s1.d_" + appConfig.getDeviceCodeSuffix()+"_";
+        String deviceCodePrefix = "root.jmdb.s1.d_" + appConfig.getDeviceCodeSuffix()+"_"
+                +"110116000000_0204_000088_00040002_0001_";
         if (writeWheel < 1) {
             log.error("写入总轮数至少为1");
             return;
@@ -300,10 +302,11 @@ public class PerformanceTestService {
             log.error("已经开启批量写入模式,总数量不能小于批次写入数据量");
             return;
         }
-//        if (batchWriteRowNum>1000){
-//            log.error("该测试模块批量写入最大1000条");
-//            return;
-//        }
+
+        if (batchWriteRowNum>1000){
+            log.error("该测试模块批量写入最大1000条");
+            return;
+        }
 
         if (threadNum!=1){
             log.error("多设备批量写只能设置为1个线程");
@@ -328,19 +331,21 @@ public class PerformanceTestService {
                         generateNum = batchWriteRowNum - n;
                     }
                 }
-                long finalGenerateNum = generateNum;
                 try {
                     Map<String, Tablet> tabletsMap=new HashMap<>();
                     //毫秒偏移量
                     long timestamp = System.currentTimeMillis() ;
-                    for (long row = 0; row < finalGenerateNum; row++) {
-                        Tablet tablet = new Tablet(deviceCodePrefix+i, schemaList, batchWriteRowNum);
+                    for (long row = 0; row < generateNum; row++) {
+                        long ln=i*batchWriteRowNum+row;
+                        //控制设置数量
+//                        ln=ln%1000;
+                        Tablet tablet = new Tablet(deviceCodePrefix+ln, schemaList, batchWriteRowNum);
                         int rowIndex = tablet.rowSize++;
                         long offset = timestamp+row;
                         tablet.addTimestamp(rowIndex, offset);
                         tablet.addValue(schemaList.get(0).getMeasurementId(), rowIndex, Convert.toDouble(offset));
                         tablet.addValue(schemaList.get(1).getMeasurementId(), rowIndex, Convert.toInt(row % 4));
-                        tabletsMap.put(deviceCodePrefix+i,tablet);
+                        tabletsMap.put(deviceCodePrefix+ln,tablet);
                     }
                     iotDbUtil.pool.insertTablets(tabletsMap,true);
                     tabletsMap.forEach((k,v)->{
@@ -357,7 +362,7 @@ public class PerformanceTestService {
 //                    }
 
                 }
-                log.info(MyDateUtil.execTime("本次批量写入条数" + finalGenerateNum+",页码："+i, pageStartTime));
+                log.info(MyDateUtil.execTime("本次批量写入条数" + generateNum+",页码："+i, pageStartTime));
             }
             Double etime = Convert.toDouble(DateUtil.spendMs(stime));
             log.info(MyDateUtil.execTime("iotdb多线程个数:" + threadNum + ",写入条数" + allWriteRowNum, stime));

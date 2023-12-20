@@ -25,7 +25,7 @@ public class QuartzStartJobListener implements ApplicationListener<ContextRefres
 	@Override
 	public void onApplicationEvent(ContextRefreshedEvent event) {
 		log.info("开始执行写入性能测试###################################");
-		performanceTestService.insertTabletTest();
+		performanceTestService.insertMTabletTest();
 		log.info("结束执行写入性能测试###################################");
 	}
 

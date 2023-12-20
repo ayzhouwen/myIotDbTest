@@ -40,7 +40,7 @@ public class MyDateUtil {
      */
     public static String execTime(String name,Long starttime){
         Double time= Convert.toDouble(DateUtil.spendMs(starttime));
-        String result=name+":"+
+        String result=name+"   执行时间："+
                 + time+"毫秒,"+ NumberUtil.decimalFormat("#.##",time/1000)+"秒,"+ NumberUtil.decimalFormat("#.##",time/1000/60)+"分钟";
         return result;
     }
