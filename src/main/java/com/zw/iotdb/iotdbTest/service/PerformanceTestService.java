@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * 性能测试，实验结果，
+ * 0.iotdb中同一个物理量中默认每秒最大写入是1000条（写多了会覆盖，也就是丢数据，一般生产环境不会出现），除非把时间戳设置为纳秒 timestamp_precision=ns
  * 1.由于顺序写，一般批量写 非纳秒写入，机械能接近固态的速度（大概 机械25多万，固态33万）
  * 2.多线程提升性能不是很明显
  * 3.如果设置纳秒测试，固态能达到每秒百万（也许还能提升），垃圾机械20万，但是固态下会造成时间戳格式化展示失效
@@ -279,7 +280,7 @@ public class PerformanceTestService {
 
     /**
      * 单线程多设备insertTablets写入，IOTDB timestamp_precision=ms即可，目前只支持批量写入
-     * 固态每秒8万左右（注意模拟的真实生产环境数据，table的列表长度其实是1个元素，接近真实数据，真实数据不可能给你批量报上来，都是一个时间点的数据）
+     * 固态每秒8万左右（注意模拟的真实生产环境50万测点数据，table的列表长度其实是1个元素，接近真实数据，真实数据不可能给你批量报上来，都是一个时间点的数据）
      */
     public void insertMTabletTest() {
         int threadNum = Convert.toInt(appConfig.getWriteThreadNum());
@@ -337,8 +338,8 @@ public class PerformanceTestService {
                     long timestamp = System.currentTimeMillis() ;
                     for (long row = 0; row < generateNum; row++) {
                         long ln=i*batchWriteRowNum+row;
-                        //控制设置数量
-//                        ln=ln%1000;
+                        //控制设备（jm中叫监测点）数量，设备数量越少，相对写入速度越快
+                        ln=ln%10000*50;
                         Tablet tablet = new Tablet(deviceCodePrefix+ln, schemaList, batchWriteRowNum);
                         int rowIndex = tablet.rowSize++;
                         long offset = timestamp+row;
